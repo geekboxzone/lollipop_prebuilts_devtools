@@ -9,6 +9,7 @@ fi
 
 # Define projects to build and files to copy.
 function list_projects() {
+  add_project ddmlib
   add_project manifmerger
   add_project jobb etc/jobb etc/jobb.bat
 }
@@ -23,7 +24,7 @@ function add_project() {
   # $1=project name
   # $2...=optional files to copy (relative to project dir)
   local proj=$1
-  echo "## Getting properties for project $proj"
+  echo "## Getting gradle properties for project $proj"
   # Request to build the jar for that project
   BUILD_LIST="$BUILD_LIST :$proj:jar"
   # Copy the resulting JAR
