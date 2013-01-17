@@ -11,7 +11,7 @@ while [[ -n "$1" ]]; do
     FILTER="$1"
   else
     echo "Unknown argument: $1"
-    echo "Usage: $0 [-f] [project_to_update]"
+    echo "Usage: $0 [project_to_update] [-f]"
     echo "      (default: updates all jars.)"
     exit 1
   fi
@@ -21,7 +21,7 @@ done
 
 # Define projects to build and files to copy.
 function list_projects() {
-  add_project sdklib
+  add_project sdklib      @./post_update.sh
   add_project sdkuilib    in:tools/swt
   add_project swtmenubar  in:tools/swt
   add_project ddmlib
@@ -32,7 +32,11 @@ function list_projects() {
 # ----
 # List of targets to build, e.g. :jobb:jar
 declare -A BUILD_LIST    # -A==associative array, aka a map[string]=>string
-# List of files to copy. Syntax: relative/dir (relative to src & dest) or src/rel/dir|dst/rel/dir.
+# List of files to copy.
+# Syntax:
+#     relative/dir              (copy, relative to src & dest)
+#     src/rel/dir|dst/rel/dir   (copy, with different destination name)
+#     @relative_script          (executes script in dest/proj dir)
 declare -A COPY_LIST
 
 function add_project() {
@@ -67,7 +71,7 @@ function add_project() {
                END { print B "/libs/" N "-" V ".jar" }'i )`
   COPY_LIST[$repo]="${COPY_LIST[$repo]} $src|$dst"
 
-  # Copy all the optiona files
+  # Copy all the optional files
   while [[ -n "$1" ]]; do
     COPY_LIST[$repo]="${COPY_LIST[$repo]} $proj/$1"
     shift
@@ -101,10 +105,18 @@ function copy_files() {
     echo "## WARNING: nothing to copy in tools/$repo."
   else
     for f in ${COPY_LIST[$repo]}; do
-      src="${f%%|*}"    # strip part after  | if any
-      dst="${f##*|}"    # strip part before | if any
-      if [[ ${src:0:1} != "/" ]]; then src=../../tools/$repo/$src; fi
-      $DRY cp -v $src $dst
+      if [[ "${f/@//}" == "$f" ]]; then
+        src="${f%%|*}"    # strip part after  | if any
+        dst="${f##*|}"    # strip part before | if any
+        if [[ ${src:0:1} != "/" ]]; then src=../../tools/$repo/$src; fi
+        $DRY cp -v $src $dst
+      else
+        # syntax is proj/@script_name
+        d="${f%%@*}"      # string part after @, that's the proj dir name
+        f="${f##*@}"      # strip part before @, script name is what's left.
+        echo "## Execute $d => $f"
+        ( cd "$d" && pwd && $DRY $f )
+      fi
     done
   fi
 }
