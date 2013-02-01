@@ -31,13 +31,30 @@ function list_projects() {
 
 # ----
 # List of targets to build, e.g. :jobb:jar
-declare -A BUILD_LIST    # -A==associative array, aka a map[string]=>string
+BUILD_LIST_base=""
+BUILD_LIST_swt=""
 # List of files to copy.
 # Syntax:
 #     relative/dir              (copy, relative to src & dest)
 #     src/rel/dir|dst/rel/dir   (copy, with different destination name)
 #     @relative_script          (executes script in dest/proj dir)
-declare -A COPY_LIST
+COPY_LIST_base=""
+COPY_LIST_swt=""
+
+function get_map() {
+  #$1=map name (BUILD_LIST or COPY_LIST)
+  #$2=map key  (base or swt)
+  eval local V=\$$1_$2
+  echo $V
+}
+
+function append_map() {
+  #$1=map name (BUILD_LIST or COPY_LIST)
+  #$2=map key  (base or swt)
+  #$3=value to append (will be space separated)
+  eval local V=\$$1_$2
+  eval $1_$2=\"$V $3\"
+}
 
 function add_project() {
   # $1=project name
@@ -59,7 +76,7 @@ function add_project() {
 
   echo "## Getting gradle properties for project tools/$repo/$proj"
   # Request to build the jar for that project
-  BUILD_LIST[$repo]="${BUILD_LIST[$repo]} :$proj:jar"
+  append_map BUILD_LIST $repo ":$proj:jar"
 
   # Copy the resulting JAR
   local dst=$proj/$proj.jar
@@ -69,11 +86,11 @@ function add_project() {
                /^buildDir:/         { B=$2 } \
                /^version:/          { V=$2 } \
                END { print B "/libs/" N "-" V ".jar" }'i )`
-  COPY_LIST[$repo]="${COPY_LIST[$repo]} $src|$dst"
+  append_map COPY_LIST $repo "$src|$dst"
 
   # Copy all the optional files
   while [[ -n "$1" ]]; do
-    COPY_LIST[$repo]="${COPY_LIST[$repo]} $proj/$1"
+    append_map COPY_LIST $repo "$proj/$1"
     shift
   done
   return 0
@@ -82,7 +99,8 @@ function add_project() {
 function build() {
   local repo=$1
   echo
-  if [[ -z "${BUILD_LIST[$repo]}" ]]; then
+  local buildlist=`get_map BUILD_LIST $repo`
+  if [[ -z "$buildlist" ]]; then
     echo "## WARNING: nothing to build in tools/$repo."
     return 1
   else
@@ -92,8 +110,8 @@ function build() {
       echo "## PublishLocal in tools/base (needed for tools/swt)"
       ( cd ../../tools/base ; ./gradlew publishLocal )
     fi
-    echo "## Building tools/$repo: ${BUILD_LIST[$repo]}"
-    ( cd ../../tools/$repo ; ./gradlew ${BUILD_LIST[$repo]} )
+    echo "## Building tools/$repo: $buildlist"
+    ( cd ../../tools/$repo ; ./gradlew $buildlist )
     return 0
   fi
 }
@@ -101,10 +119,11 @@ function build() {
 function copy_files() {
   local repo=$1
   echo
-  if [[ -z "${COPY_LIST[$repo]}" ]]; then
+  local copylist=`get_map COPY_LIST $repo`
+  if [[ -z "$copylist" ]]; then
     echo "## WARNING: nothing to copy in tools/$repo."
   else
-    for f in ${COPY_LIST[$repo]}; do
+    for f in $copylist; do
       if [[ "${f/@//}" == "$f" ]]; then
         src="${f%%|*}"    # strip part after  | if any
         dst="${f##*|}"    # strip part before | if any
