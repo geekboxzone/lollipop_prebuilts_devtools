@@ -7,8 +7,8 @@ FILTER=""     # name of a specific jar to update (default: update them all)
 while [[ -n "$1" ]]; do
   if [[ "$1" == "-f" ]]; then
     DRY=""
-  elif [[ -z "$FILTER" ]]; then
-    FILTER="$1"
+  elif [[ $1 =~ ^[a-z]+ ]]; then
+    FILTER="$FILTER $1 "
   else
     echo "Unknown argument: $1"
     echo "Usage: $0 [project_to_update] [-f]"
@@ -21,12 +21,21 @@ done
 
 # Define projects to build and files to copy.
 function list_projects() {
-  add_project sdklib      @./post_update.sh
-  add_project sdkuilib    in:tools/swt
-  add_project swtmenubar  in:tools/swt
+  add_project assetstudio
+  add_project common
   add_project ddmlib
+  add_project dvlib
+  add_project jobb            etc/jobb etc/jobb.bat
+  add_project layoutlib_api
+  add_project lint_api
+  add_project lint            "cli/etc/lint|etc/lint" "cli/etc/lint.bat|etc/lint.bat"
+  add_project lint_checks
   add_project manifmerger
-  add_project jobb etc/jobb etc/jobb.bat
+  #add_project rule_api -- TODO do this one next
+  add_project sdk_common
+  add_project sdklib
+  add_project sdkuilib        in:tools/swt
+  add_project swtmenubar      in:tools/swt
 }
 
 # ----
@@ -60,10 +69,10 @@ function add_project() {
   # $1=project name
   # $2=optional in:tools/swt repo (default: tools/base)
   # $2...=optional files to copy (relative to project dir)
-  local proj=$1
+  local proj=$1 src dst f
   shift
 
-  if [[ -n "$FILTER" && "$proj" != "$FILTER" ]]; then
+  if [[ -n "$FILTER" && "${FILTER/ $proj /}" == "$FILTER" ]]; then
     echo "## Skipping project $proj"
     return
   fi
@@ -74,52 +83,48 @@ function add_project() {
     shift
   fi
 
-  echo "## Getting gradle properties for project tools/$repo/$proj"
+  echo "## Updating project tools/$repo/$proj"
   # Request to build the jar for that project
-  append_map BUILD_LIST $repo ":$proj:jar"
-
-  # Copy the resulting JAR
-  local dst=$proj/$proj.jar
-  local src=`(cd ../../tools/$repo ; ./gradlew :$proj:properties | \
-          awk 'BEGIN { B=""; N=""; V="" } \
-               /^archivesBaseName:/ { N=$2 } \
-               /^buildDir:/         { B=$2 } \
-               /^version:/          { V=$2 } \
-               END { print B "/libs/" N "-" V ".jar" }'i )`
-  append_map COPY_LIST $repo "$src|$dst"
+  append_map BUILD_LIST $repo ":$proj:prebuiltJar"
 
   # Copy all the optional files
   while [[ -n "$1" ]]; do
-    append_map COPY_LIST $repo "$proj/$1"
+    f=$1
+    src="${f%%|*}"    # strip part after  | if any
+    dst="${f##*|}"    # strip part before | if any
+    if [[ ${src:0:1} != "/" ]]; then src=$proj/$src; fi
+    append_map COPY_LIST $repo "$src|$dst"
     shift
   done
   return 0
 }
 
 function build() {
-  local repo=$1
   echo
-  local buildlist=`get_map BUILD_LIST $repo`
+  local repo=$1
+  local buildlist=$(get_map BUILD_LIST $repo)
+
+  # To build tools/swt, we'll need to first locally publish some
+  # libs from tools/base.
+  if [[ "$repo" == "base" && -n $(get_map BUILD_LIST swt) ]]; then
+    echo "## PublishLocal in tools/base (needed for tools/swt)"
+    buildlist="$buildlist publishLocal"
+  fi
+
   if [[ -z "$buildlist" ]]; then
     echo "## WARNING: nothing to build in tools/$repo."
     return 1
   else
-    # To build tools/swt, we'll need to first locally publish some
-    # libs from tools/base.
-    if [[ "$repo" == "swt" ]]; then
-      echo "## PublishLocal in tools/base (needed for tools/swt)"
-      ( cd ../../tools/base ; ./gradlew publishLocal )
-    fi
     echo "## Building tools/$repo: $buildlist"
-    ( cd ../../tools/$repo ; ./gradlew $buildlist )
+    ( D="$PWD" ; cd ../../tools/$repo ; $DRY ./gradlew -PprebuiltPath="$D" $buildlist )
     return 0
   fi
 }
 
 function copy_files() {
-  local repo=$1
+  local repo=$1 src dst dstdir
   echo
-  local copylist=`get_map COPY_LIST $repo`
+  local copylist=$(get_map COPY_LIST $repo)
   if [[ -z "$copylist" ]]; then
     echo "## WARNING: nothing to copy in tools/$repo."
   else
@@ -128,6 +133,8 @@ function copy_files() {
         src="${f%%|*}"    # strip part after  | if any
         dst="${f##*|}"    # strip part before | if any
         if [[ ${src:0:1} != "/" ]]; then src=../../tools/$repo/$src; fi
+        dstdir=$(dirname $dst)
+        if [[ ! -d $dstdir ]]; then $DRY mkdir -p $dstdir; fi
         $DRY cp -v $src $dst
       else
         # syntax is proj/@script_name
