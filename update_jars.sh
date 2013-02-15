@@ -1,17 +1,28 @@
 #!/bin/bash
 
-set -e        # fail on errors
-DRY="echo"    # default to dry mode unless -f is specified
-FILTER=""     # name of a specific jar to update (default: update them all)
+set -e            # fail on errors
+
+PROG_DIR=$(readlink -f $(dirname "$0"))
+cd "$PROG_DIR"
+
+DRY="echo"        # default to dry mode unless -f is specified
+FILTER=""         # name of a specific jar to update (default: update them all)
+MK_MERGE_MSG="1"  # 1 to update the MERGE_MSG, empty to do not generate it
+MERGE_MSG1=""     # msg to generate
+MERGE_MSG2=""     # msg to generate
 
 while [[ -n "$1" ]]; do
   if [[ "$1" == "-f" ]]; then
     DRY=""
+  elif [[ "$1" == "-m" ]]; then
+    MK_MERGE_MSG=""
   elif [[ $1 =~ ^[a-z]+ ]]; then
-    FILTER="$FILTER $1 "
+    FILTER="$FILTER ${1/.jar/} "
   else
     echo "Unknown argument: $1"
-    echo "Usage: $0 [project_to_update] [-f]"
+    echo "Usage: $0 [project_to_update] [-f] [-m]"
+    echo "       -f: force actually generating/modifying files."
+    echo "       -m: do NOT generate a .git/MERGE_MSG"
     echo "      (default: updates all jars.)"
     exit 1
   fi
@@ -104,6 +115,16 @@ function build() {
   local repo=$1
   local buildlist=$(get_map BUILD_LIST $repo)
 
+  if [[ -n "$buildlist" ]]; then
+    local names=${buildlist//:/}
+    names=${names//prebuiltJar/}
+    MERGE_MSG1="$MERGE_MSG1
+tools/$repo: Changed $names"
+    local SHA1=$( cd ../../tools/$repo ; git show-ref --head --hash HEAD )
+    MERGE_MSG2="$MERGE_MSG2
+tools/$repo @ $SHA1"
+  fi
+
   # To build tools/swt, we'll need to first locally publish some
   # libs from tools/base.
   if [[ "$repo" == "base" && -n $(get_map BUILD_LIST swt) ]]; then
@@ -147,12 +168,27 @@ function copy_files() {
   fi
 }
 
+function merge_msg() {
+  local dst=.git/MERGE_MSG
+  if [[ -n $DRY ]]; then
+    echo "The following would be output to $dst (use -m to prevent this):"
+    dst=/dev/stdout
+  fi
+  cat >> $dst <<EOMSG
+Update SDK prebuilts.
+$MERGE_MSG1
+
+Origin:$MERGE_MSG2
+EOMSG
+}
+
 list_projects
 for r in base swt; do
   if build $r; then
     copy_files $r
   fi
 done
+if [[ $MK_MERGE_MSG ]]; then merge_msg; fi
 if [[ -n $DRY ]]; then
   echo
   echo "## WARNING: DRY MODE. Run with -f to actually copy files."
