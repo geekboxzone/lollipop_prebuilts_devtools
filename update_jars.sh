@@ -2,7 +2,11 @@
 
 set -e            # fail on errors
 
-PROG_DIR=$(readlink -f $(dirname "$0"))
+if [[ $(uname) == "Darwin" ]]; then
+  PROG_DIR=$(dirname "$0")
+else
+  PROG_DIR=$(readlink -f $(dirname "$0"))
+fi
 cd "$PROG_DIR"
 
 DRY="echo"        # default to dry mode unless -f is specified
