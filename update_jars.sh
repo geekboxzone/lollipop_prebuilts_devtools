@@ -40,10 +40,10 @@ function list_projects() {
   add_project common
   add_project ddmlib
   add_project dvlib
-  add_project jobb            etc/jobb etc/jobb.bat
+  add_project jobb            "etc/jobb|tools/jobb" "etc/jobb.bat|tools/jobb.bat"
   add_project layoutlib_api
   add_project lint_api
-  add_project lint            "cli/etc/lint|etc/lint" "cli/etc/lint.bat|etc/lint.bat"
+  add_project lint            "cli/etc/lint|tools/lint" "cli/etc/lint.bat|tools/lint.bat"
   add_project lint_checks
   add_project manifmerger
   #add_project rule_api -- TODO do this one next
