@@ -57,7 +57,7 @@ for /f %%a in ('%java_exe% -jar lib\archquery.jar') do set swt_path=lib\%%a
     copy /B /D /Y lib\httpclient*        %tmp_dir%\lib\        > nul
     copy /B /D /Y lib\httpcore*          %tmp_dir%\lib\        > nul
     copy /B /D /Y lib\httpmime*          %tmp_dir%\lib\        > nul
-    copy /B /D /Y lib\layoutlib_api.jar  %tmp_dir%\lib\        > nul
+    copy /B /D /Y lib\layoutlib-api.jar  %tmp_dir%\lib\        > nul
     copy /B /D /Y lib\org.eclipse.*      %tmp_dir%\lib\        > nul
     copy /B /D /Y lib\sdk*               %tmp_dir%\lib\        > nul
     copy /B /D /Y lib\swtmenubar.jar     %tmp_dir%\lib\        > nul

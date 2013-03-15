@@ -1,6 +1,6 @@
 ============================================================
 Notices for file(s):
-lint_checks.jar
+lint-api.jar
 ------------------------------------------------------------
 
    Copyright (c) 2011, The Android Open Source Project
