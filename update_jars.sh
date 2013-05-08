@@ -53,7 +53,7 @@ function update() {
   MERGE_MSG="$MERGE_MSG
 tools/$repo: @ $SHA1"
 
-  ( $DRY cd ../../tools/$repo && $DRY ./gradlew publishLocal pushDistribution )
+  ( $DRY cd ../../tools/$repo && $DRY ./gradlew clean publishLocal pushDistribution )
 }
 
 function merge_msg() {
