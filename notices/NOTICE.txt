@@ -7553,7 +7553,7 @@ jsilver-1.0.0.jar
 
 ============================================================
 Notices for file(s):
-jython-2.5.3.jar
+jython-standalone-2.5.3.jar
 ------------------------------------------------------------
 Source: http://www.jython.org/license.html
 
