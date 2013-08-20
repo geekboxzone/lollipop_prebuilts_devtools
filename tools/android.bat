@@ -25,7 +25,7 @@ rem and set up progdir to be the fully-qualified pathname of its directory.
 set prog=%~f0
 
 rem Grab current directory before we change it
-set work_dir="%cd%"
+set work_dir=%cd%
 
 rem Change current directory and drive to where the script is, to avoid
 rem issues with directories containing whitespaces.
@@ -40,7 +40,7 @@ if not defined java_exe goto :EOF
 set jar_path=lib\sdkmanager.jar;lib\swtmenubar.jar
 
 rem Set SWT.Jar path based on current architecture (x86 or x86_64)
-for /f %%a in ('%java_exe% -jar lib\archquery.jar') do set swt_path=lib\%%a
+for /f "delims=" %%a in ('"%java_exe%" -jar lib\archquery.jar') do set swt_path=lib\%%a
 
 :MkTempCopy
     rem Copy android.bat and its required libs to a temp dir.
@@ -71,7 +71,7 @@ for /f %%a in ('%java_exe% -jar lib\archquery.jar') do set swt_path=lib\%%a
 rem The global ANDROID_SWT always override the SWT.Jar path
 if defined ANDROID_SWT set swt_path=%ANDROID_SWT%
 
-if exist %swt_path% goto SetPath
+if exist "%swt_path%" goto SetPath
     echo ERROR: SWT folder '%swt_path%' does not exist.
     echo Please set ANDROID_SWT to point to the folder containing swt.jar for your platform.
     goto :EOF
@@ -79,6 +79,6 @@ if exist %swt_path% goto SetPath
 :SetPath
 rem Finally exec the java program and end here.
 REM set REMOTE_DEBUG=-Xdebug -Xrunjdwp:transport=dt_socket,server=y,suspend=y,address=8000
-call %java_exe% %REMOTE_DEBUG% -Dcom.android.sdkmanager.toolsdir="%tools_dir%" -Dcom.android.sdkmanager.workdir=%work_dir% -classpath "%jar_path%;%swt_path%\swt.jar" com.android.sdkmanager.Main %*
+call "%java_exe% %REMOTE_DEBUG%" "-Dcom.android.sdkmanager.toolsdir=%tools_dir%" "-Dcom.android.sdkmanager.workdir=%work_dir%" -classpath "%jar_path%;%swt_path%\swt.jar" com.android.sdkmanager.Main %*
 
 rem EOF
