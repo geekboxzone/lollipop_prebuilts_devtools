@@ -33,13 +33,13 @@ call lib\find_java.bat
 if not defined java_exe goto :EOF
 
 set jarfile=ddms.jar
-set frameworkdir=
+set frameworkdir=.
 
-if exist %frameworkdir%%jarfile% goto JarFileOk
-    set frameworkdir=lib\
+if exist %frameworkdir%\%jarfile% goto JarFileOk
+    set frameworkdir=lib
 
-if exist %frameworkdir%%jarfile% goto JarFileOk
-    set frameworkdir=..\framework\
+if exist %frameworkdir%\%jarfile% goto JarFileOk
+    set frameworkdir=..\framework
 
 :JarFileOk
 
@@ -48,7 +48,7 @@ if debug NEQ "%1" goto NoDebug
     shift 1
 :NoDebug
 
-set jarpath=%frameworkdir%%jarfile%;%frameworkdir%swtmenubar.jar
+set jarpath=%frameworkdir%\%jarfile%;%frameworkdir%\swtmenubar.jar
 
 if not defined ANDROID_SWT goto QueryArch
     set swt_path=%ANDROID_SWT%
@@ -56,11 +56,11 @@ if not defined ANDROID_SWT goto QueryArch
 
 :QueryArch
 
-    for /f %%a in ('%java_exe% -jar %frameworkdir%archquery.jar') do set swt_path=%frameworkdir%%%a
+    for /f "delims=" %%a in ('"%java_exe%" -jar %frameworkdir%\archquery.jar') do set swt_path=%frameworkdir%\%%a
 
 :SwtDone
 
-if exist %swt_path% goto SetPath
+if exist "%swt_path%" goto SetPath
     echo SWT folder '%swt_path%' does not exist.
     echo Please set ANDROID_SWT to point to the folder containing swt.jar for your platform.
     exit /B
@@ -70,5 +70,5 @@ set javaextdirs=%swt_path%;%frameworkdir%
 
 echo The standalone version of DDMS is deprecated.
 echo Please use Android Device Monitor (monitor.bat) instead.
-call %java_exe% %java_debug% -Dcom.android.ddms.bindir=%prog_dir% -classpath "%jarpath%;%swt_path%\swt.jar" com.android.ddms.Main %*
+call "%java_exe%" %java_debug% "-Dcom.android.ddms.bindir=%prog_dir%" -classpath "%jarpath%;%swt_path%\swt.jar" com.android.ddms.Main %*
 

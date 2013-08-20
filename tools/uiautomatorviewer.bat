@@ -33,17 +33,17 @@ call lib\find_java.bat
 if not defined java_exe goto :EOF
 
 set jarfile=uiautomatorviewer.jar
-set frameworkdir=
+set frameworkdir=.
 
-if exist %frameworkdir%%jarfile% goto JarFileOk
-    set frameworkdir=lib\
+if exist %frameworkdir%\%jarfile% goto JarFileOk
+    set frameworkdir=lib
 
-if exist %frameworkdir%%jarfile% goto JarFileOk
-    set frameworkdir=..\framework\
+if exist %frameworkdir%\%jarfile% goto JarFileOk
+    set frameworkdir=..\framework
 
 :JarFileOk
 
-set jarpath=%frameworkdir%%jarfile%
+set jarpath=%frameworkdir%\%jarfile%
 
 if not defined ANDROID_SWT goto QueryArch
     set swt_path=%ANDROID_SWT%
@@ -51,11 +51,11 @@ if not defined ANDROID_SWT goto QueryArch
 
 :QueryArch
 
-    for /f %%a in ('%java_exe% -jar %frameworkdir%archquery.jar') do set swt_path=%frameworkdir%%%a
+    for /f "delims=" %%a in ('"%java_exe%" -jar %frameworkdir%\archquery.jar') do set swt_path=%frameworkdir%\%%a
 
 :SwtDone
 
-if exist %swt_path% goto SetPath
+if exist "%swt_path%" goto SetPath
     echo SWT folder '%swt_path%' does not exist.
     echo Please set ANDROID_SWT to point to the folder containing swt.jar for your platform.
     exit /B
@@ -63,4 +63,4 @@ if exist %swt_path% goto SetPath
 :SetPath
 set javaextdirs=%swt_path%;%frameworkdir%
 
-call %java_exe% -Djava.ext.dirs=%javaextdirs% -Dcom.android.uiautomator.bindir=%prog_dir% -jar %jarpath% %*
+call "%java_exe%" "-Djava.ext.dirs=%javaextdirs%" "-Dcom.android.uiautomator.bindir=%prog_dir%" -jar %jarpath% %*
