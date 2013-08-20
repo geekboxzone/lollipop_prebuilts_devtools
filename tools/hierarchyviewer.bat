@@ -33,14 +33,14 @@ call lib\find_java.bat
 if not defined java_exe goto :EOF
 
 set jarfile=hierarchyviewer2.jar
-set frameworkdir=
+set frameworkdir=.
 set libdir=
 
-if exist %frameworkdir%%jarfile% goto JarFileOk
-    set frameworkdir=lib\
+if exist %frameworkdir%\%jarfile% goto JarFileOk
+    set frameworkdir=lib
 
-if exist %frameworkdir%%jarfile% goto JarFileOk
-    set frameworkdir=..\framework\
+if exist %frameworkdir%\%jarfile% goto JarFileOk
+    set frameworkdir=..\framework
 
 :JarFileOk
 
@@ -49,7 +49,7 @@ if debug NEQ "%1" goto NoDebug
     shift 1
 :NoDebug
 
-set jarpath=%frameworkdir%%jarfile%;%frameworkdir%hierarchyviewerlib.jar;%frameworkdir%swtmenubar.jar
+set jarpath=%frameworkdir%\%jarfile%;%frameworkdir%\hierarchyviewerlib.jar;%frameworkdir%\swtmenubar.jar
 
 if not defined ANDROID_SWT goto QueryArch
     set swt_path=%ANDROID_SWT%
@@ -57,11 +57,11 @@ if not defined ANDROID_SWT goto QueryArch
 
 :QueryArch
 
-    for /f %%a in ('%java_exe% -jar %frameworkdir%archquery.jar') do set swt_path=%frameworkdir%%%a
+    for /f "delims=" %%a in ('"%java_exe%" -jar %frameworkdir%\archquery.jar') do set swt_path=%frameworkdir%\%%a
 
 :SwtDone
 
-if exist %swt_path% goto SetPath
+if exist "%swt_path%" goto SetPath
     echo SWT folder '%swt_path%' does not exist.
     echo Please set ANDROID_SWT to point to the folder containing swt.jar for your platform.
     exit /B
@@ -70,6 +70,6 @@ if exist %swt_path% goto SetPath
 
 echo The standalone version of hieararchyviewer is deprecated.
 echo Please use Android Device Monitor (tools/monitor.bat) instead.
-call %java_exe% %java_debug% -Xmx512m -Dcom.android.hierarchyviewer.bindir=%prog_dir% -classpath "%jarpath%;%swt_path%\swt.jar" com.android.hierarchyviewer.HierarchyViewerApplication %*
+call "%java_exe%" %java_debug% -Xmx512m "-Dcom.android.hierarchyviewer.bindir=%prog_dir%" -classpath "%jarpath%;%swt_path%\swt.jar" com.android.hierarchyviewer.HierarchyViewerApplication %*
 
 
