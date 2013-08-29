@@ -64,6 +64,7 @@ function merge_msg() {
   fi
   cat >> $dst <<EOMSG
 Update SDK prebuilts.
+
 Origin:
 $MERGE_MSG
 
